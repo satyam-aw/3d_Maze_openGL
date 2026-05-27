@@ -27,6 +27,12 @@ int startTime = clock(), endTime = clock() + 185000;
 int sec, mn = 0, hour = 0;
 bool gameOver = false, youWon = false;
 std::string strSec, strMn, strHour;
+// Track if keys are currently held down (Supports both lower & upper case)
+bool keys[256] = { false };
+bool specialKeys[256] = { false };
+
+// Delta Time variables
+int oldTimeSinceStart = 0;
 
 // File-level variables... these are all position-state / input state variables. OpenGL 
 //  callbacks with defined signatures must edit these variables, so there's no easy 
@@ -36,7 +42,7 @@ static GLfloat y_at = START_Y_AT;
 static GLfloat rot_x = -M_PI_2;
 static GLint xin = 0, yin = 0;
 static GLfloat camera_y = START_CAMERA_Y;
-static GLfloat rot_y = -M_PI_2;
+static GLfloat rot_y = -0.0f;
 
 
 // Functions
@@ -358,6 +364,80 @@ void resetGame() {
     rot_y = -M_PI_2;
 }
 
+// Define a mouse sensitivity variable (Adjust this to your liking)
+const float MOUSE_SENSITIVITY = 0.003f;
+
+void move_relative(GLfloat forward_amt, GLfloat strafe_amt)
+{
+    GLfloat orig_x = x_at;
+    GLfloat orig_y = y_at;
+
+    // Forward/Backward vectors
+    GLfloat fx = cos(rot_x) * forward_amt;
+    GLfloat fy = sin(rot_x) * forward_amt;
+
+    // CORRECTED: Strafe Right/Left vectors (A = Left, D = Right)
+    GLfloat sx = -sin(rot_x) * strafe_amt;
+    GLfloat sy = cos(rot_x) * strafe_amt;
+
+    x_at += fx + sx;
+    y_at += fy + sy;
+
+    if (collide())
+    {
+        x_at -= BOUNCEBACK * (fx + sx);
+        y_at -= BOUNCEBACK * (fy + sy);
+    }
+    if (collide())
+    {
+        x_at = orig_x;
+        y_at = orig_y;
+    }
+}
+
+void update_movement()
+{
+    // 1. Calculate Delta Time (seconds elapsed since last frame)
+    int timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
+    float deltaTime = (timeSinceStart - oldTimeSinceStart) / 1000.0f;
+    oldTimeSinceStart = timeSinceStart;
+
+    // Prevent sudden huge jumps if the window loses focus
+    if (deltaTime > 0.1f) deltaTime = 0.1f;
+
+    // 2. Adjust speeds relative to the frame time
+    float current_walk_speed = WALK_KEY_SENSE * 60.0f * deltaTime;
+    float current_reverse_speed = WALK_KEY_REVERSE_SENSE * 60.0f * deltaTime;
+    float current_turn_speed = ROTATE_KEY_SENSE * 60.0f * deltaTime;
+
+    // 3. Process movement combined smoothly every single frame
+    float forward_amt = 0.0f;
+    float strafe_amt = 0.0f;
+
+    // Forward / Backward
+    if (keys['w'] || keys['W'] || specialKeys[GLUT_KEY_UP])
+        forward_amt += current_walk_speed;
+    if (keys['s'] || keys['S'] || specialKeys[GLUT_KEY_DOWN])
+        forward_amt -= current_reverse_speed;
+
+    // Strafe Left / Right
+    if (keys['a'] || keys['A'])
+        strafe_amt -= current_walk_speed;
+    if (keys['d'] || keys['D'])
+        strafe_amt += current_walk_speed;
+
+    // Apply movement if any keys are pressed
+    if (forward_amt != 0.0f || strafe_amt != 0.0f) {
+        move_relative(forward_amt, strafe_amt);
+    }
+
+    // Traditional arrow key camera rotation snaps (if still desired alongside mouse)
+    if (camera_y <= 0.0f) {
+        if (specialKeys[GLUT_KEY_RIGHT]) rot_x += current_turn_speed;
+        if (specialKeys[GLUT_KEY_LEFT])  rot_x -= current_turn_speed;
+    }
+}
+
 void drawscene()
 {  
  static bool init=0;
@@ -381,7 +461,7 @@ void drawscene()
   x_at = X_INIT;
   y_at = Y_INIT;
  }
- 
+
  if(abs(xin)>40 && abs(yin) > 40 && abs(xin - windowwidth())>40&&abs(yin - windowheight()) > 40)
  {
     if (yin<CONTROLLER_PLAY || yin>(windowheight() - CONTROLLER_PLAY))
@@ -395,7 +475,10 @@ void drawscene()
  }
  
  glLoadIdentity(); // Make sure we're no longer rotated.
- glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // Clear screen and depth buffer 
+
+ update_movement(); // Calculate smooth positions right before drawing
+
+ glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
  if (!gameOver && !youWon) {
@@ -429,70 +512,6 @@ void drawscene()
 }
 
 
-
-// Define a mouse sensitivity variable (Adjust this to your liking)
-const float MOUSE_SENSITIVITY = 0.003f;
-
-void move_relative(GLfloat forward_amt, GLfloat strafe_amt)
-{
-    GLfloat orig_x = x_at;
-    GLfloat orig_y = y_at;
-
-    // Forward/Backward vectors
-    GLfloat fx = cos(rot_x) * forward_amt;
-    GLfloat fy = sin(rot_x) * forward_amt;
-
-    // CORRECTED: Strafe Right/Left vectors (A = Left, D = Right)
-    GLfloat sx = -sin(rot_x) * strafe_amt;
-    GLfloat sy = cos(rot_x) * strafe_amt;
-
-    x_at += fx + sx;
-    y_at += fy + sy;
-
-    if (collide())
-    {
-        x_at -= BOUNCEBACK * (fx + sx);
-        y_at -= BOUNCEBACK * (fy + sy);
-    }
-    if (collide())
-    {
-        x_at = orig_x;
-        y_at = orig_y;
-    }
-}
-
-// Arrow keys still function as forward/back and snap turn if desired
-void arrows(GLint key, GLint x, GLint y)
-{
-    if (key == GLUT_KEY_UP)
-        move_relative(WALK_KEY_SENSE, 0.0f);
-    if (key == GLUT_KEY_DOWN)
-        move_relative(-WALK_KEY_REVERSE_SENSE, 0.0f);
-
-    if (camera_y <= 0.0f) // Removed old mouse-tracking boolean triggers
-    {
-        if (key == GLUT_KEY_RIGHT)
-            rot_x += ROTATE_KEY_SENSE;
-        if (key == GLUT_KEY_LEFT)
-            rot_x -= ROTATE_KEY_SENSE;
-    }
-}
-
-void keypress(unsigned char key, GLint x, GLint y)
-{
-    if (key == ESCAPE) exit(0);
-
-    switch (key) {
-    case 'w': case 'W': move_relative(WALK_KEY_SENSE, 0.0f); break;
-    case 's': case 'S': move_relative(-WALK_KEY_REVERSE_SENSE, 0.0f); break;
-
-        // FIXED: A now passes negative (Left), D passes positive (Right)
-    case 'a': case 'A': move_relative(0.0f, -WALK_KEY_SENSE); break;
-    case 'd': case 'D': move_relative(0.0f, WALK_KEY_SENSE); break;
-    default: break;
-    }
-}
-
 void mouse(int x, int y)
 {
     int cx = windowwidth() / 2;
@@ -506,7 +525,7 @@ void mouse(int x, int y)
     // Horizontal rotation (Yaw)
     rot_x += dx * MOUSE_SENSITIVITY;
 
-    // FIXED: Vertical rotation (Pitch)
+    // Vertical rotation (Pitch)
     rot_y -= dy * MOUSE_SENSITIVITY; // Subtracting ensures looking up moves camera up
 
     // Clamp vertical look so you can't flip upside down (approx 85 degrees)
@@ -516,6 +535,28 @@ void mouse(int x, int y)
     glutWarpPointer(cx, cy);
 }
 
+// --- NORMAL KEYS ---
+void keypress(unsigned char key, int x, int y)
+{
+    if (key == ESCAPE) exit(0);
+    keys[key] = true; // Key is being held down
+}
+
+void keypress_up(unsigned char key, int x, int y)
+{
+    keys[key] = false; // Key was released
+}
+
+// --- ARROW / SPECIAL KEYS ---
+void arrows(int key, int x, int y)
+{
+    if (key < 256) specialKeys[key] = true;
+}
+
+void arrows_up(int key, int x, int y)
+{
+    if (key < 256) specialKeys[key] = false;
+}
 
 int main(int argc, char** argv)
 {
@@ -525,22 +566,28 @@ int main(int argc, char** argv)
     glutInitWindowPosition(WINDOW_STARTX, WINDOW_STARTY);
 
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+
+    // FIXED: You must create the window BEFORE registering callbacks or setting up GL
     int window = glutCreateWindow("openGLmaze by _Satyam_");
 
     glutDisplayFunc(drawscene);
-    glutIdleFunc(drawscene);
+    glutIdleFunc(drawscene); // Keeps the loop executing continuously
     glutReshapeFunc(resizer);
-    glutSpecialFunc(arrows);
-    glutKeyboardFunc(keypress);
 
-    // Smooth Look Setup
+    // Smooth Input Registrations
+    glutKeyboardFunc(keypress);
+    glutKeyboardUpFunc(keypress_up);
+    glutSpecialFunc(arrows);
+    glutSpecialUpFunc(arrows_up);
+
     glutPassiveMotionFunc(mouse);
-    glutSetCursor(GLUT_CURSOR_NONE); // Hides Windows mouse pointer inside your application context
+    glutSetCursor(GLUT_CURSOR_NONE);
 
     initgl(windowwidth(), windowheight());
     glDisable(GL_ALPHA_TEST);
 
-    // Warp mouse once to safely start game centered
+    // Prime the clock right before entering loop
+    oldTimeSinceStart = glutGet(GLUT_ELAPSED_TIME);
     glutWarpPointer(windowwidth() / 2, windowheight() / 2);
 
     parseMaze(XSIZE, YSIZE, "maze1.txt");

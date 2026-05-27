@@ -43,7 +43,6 @@ extern GLfloat BOUNCEBACK; //1.0f means none (just reverse collision)
 extern GLfloat SKY_SCALE;
 extern GLfloat X_INIT;
 extern GLfloat Y_INIT;
-extern GLfloat rot_y;
 
 extern std::vector<std::vector<int>> WALL_TEXTURES;
 extern std::vector<std::string> TEXTURE_PATHS;
