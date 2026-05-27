@@ -2,12 +2,14 @@
 #pragma once
 #pragma comment (lib, "glew32s.lib")
 #define _USE_MATH_DEFINES
+#define _CRT_SECURE_NO_WARNINGS
 
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <windows.h> //Seems necessary for GLUT
 #include <GL/glu.h> 
 #include <GL/glut.h>
+#include <GL\freeglut.h>
 #include <stdlib.h>
 #include <cmath>
 #include <ctime>
@@ -291,24 +293,6 @@ bool collide() //Is player in a state of collision?
  return 0;
 }
 
-void move(GLfloat amt) //Move, incorporating collision and bounceback
-{
-  x_at+=cos(rot_x)*amt;
-  y_at+=sin(rot_x)*amt; 
-  if(collide()) //Don't let player walk through walls
-  {
-   x_at-=BOUNCEBACK*cos(rot_x)*amt;
-   y_at-=BOUNCEBACK*sin(rot_x)*amt;
-  } 
-  if(collide()) //Bounced into another wall... just reverse original move
-  {
-   x_at+=BOUNCEBACK*cos(rot_x)*amt;
-   y_at+=BOUNCEBACK*sin(rot_x)*amt;
-   x_at-=cos(rot_x)*amt;
-   y_at-=sin(rot_x)*amt; 
-  } 
- }
-
 
 void drawText(int x, int y, string text = "not") {
 
@@ -444,77 +428,124 @@ void drawscene()
  glutSwapBuffers();
 }
 
-void arrows(GLint key, GLint x, GLint y) 
+
+
+// Define a mouse sensitivity variable (Adjust this to your liking)
+const float MOUSE_SENSITIVITY = 0.003f;
+
+void move_relative(GLfloat forward_amt, GLfloat strafe_amt)
 {
- if(key == GLUT_KEY_UP)
-  move(WALK_KEY_SENSE);
- if(key == GLUT_KEY_DOWN)
-  move(-WALK_KEY_REVERSE_SENSE);  
-  
- if(camera_y<=0.0f && xin && yin)
- {
-     
-  if(key == GLUT_KEY_RIGHT)
-   rot_x+=ROTATE_KEY_SENSE;
-  if(key == GLUT_KEY_LEFT)
-   rot_x-=ROTATE_KEY_SENSE;
-  }
+    GLfloat orig_x = x_at;
+    GLfloat orig_y = y_at;
+
+    // Forward/Backward vectors
+    GLfloat fx = cos(rot_x) * forward_amt;
+    GLfloat fy = sin(rot_x) * forward_amt;
+
+    // CORRECTED: Strafe Right/Left vectors (A = Left, D = Right)
+    GLfloat sx = -sin(rot_x) * strafe_amt;
+    GLfloat sy = cos(rot_x) * strafe_amt;
+
+    x_at += fx + sx;
+    y_at += fy + sy;
+
+    if (collide())
+    {
+        x_at -= BOUNCEBACK * (fx + sx);
+        y_at -= BOUNCEBACK * (fy + sy);
+    }
+    if (collide())
+    {
+        x_at = orig_x;
+        y_at = orig_y;
+    }
 }
 
-void keypress(unsigned char key, GLint x, GLint y) 
+// Arrow keys still function as forward/back and snap turn if desired
+void arrows(GLint key, GLint x, GLint y)
 {
- if(key==ESCAPE)exit(0); 
- else {
-     switch (key) {
-         case 'w': arrows(GLUT_KEY_UP, x, y);
-             break;
-         case 'a': arrows(GLUT_KEY_LEFT, x, y);
-             break;
-         case 's': arrows(GLUT_KEY_DOWN, x, y);
-             break;
-         case 'd': arrows(GLUT_KEY_RIGHT, x, y);
-             break;
-         default: break;
-     }        
- }
+    if (key == GLUT_KEY_UP)
+        move_relative(WALK_KEY_SENSE, 0.0f);
+    if (key == GLUT_KEY_DOWN)
+        move_relative(-WALK_KEY_REVERSE_SENSE, 0.0f);
+
+    if (camera_y <= 0.0f) // Removed old mouse-tracking boolean triggers
+    {
+        if (key == GLUT_KEY_RIGHT)
+            rot_x += ROTATE_KEY_SENSE;
+        if (key == GLUT_KEY_LEFT)
+            rot_x -= ROTATE_KEY_SENSE;
+    }
 }
 
-void mouse(int x, int y) 
+void keypress(unsigned char key, GLint x, GLint y)
 {
- static int mouses=0; //Used to wait for a real mouse move vs. initial positioning call
- if(mouses<=1)
- { 
-  ++mouses;
-  xin=0; yin=0;
-  return;
- }
- xin=x; yin=y;
+    if (key == ESCAPE) exit(0);
+
+    switch (key) {
+    case 'w': case 'W': move_relative(WALK_KEY_SENSE, 0.0f); break;
+    case 's': case 'S': move_relative(-WALK_KEY_REVERSE_SENSE, 0.0f); break;
+
+        // FIXED: A now passes negative (Left), D passes positive (Right)
+    case 'a': case 'A': move_relative(0.0f, -WALK_KEY_SENSE); break;
+    case 'd': case 'D': move_relative(0.0f, WALK_KEY_SENSE); break;
+    default: break;
+    }
 }
 
-int main(int argc, char **argv) 
-{ 
- /* The number of our GLUT window */
- GLuint window; 
- 
- glutInit(&argc, argv); 
- glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH); 
- glDisable(GLUT_ALPHA);
- glutInitWindowSize(windowwidth(),windowheight()); 
- glutInitWindowPosition(WINDOW_STARTX, WINDOW_STARTY); 
+void mouse(int x, int y)
+{
+    int cx = windowwidth() / 2;
+    int cy = windowheight() / 2;
 
- window = glutCreateWindow("openGLmaze by _Satyam_"); 
+    if (x == cx && y == cy) return;
 
- glutDisplayFunc(&drawscene); 
- glutIdleFunc(&drawscene);
- glutReshapeFunc(&resizer);
- glutSpecialFunc(&arrows); //"Special" key presses
- glutKeyboardFunc(&keypress); //"Special" key presses
- glutPassiveMotionFunc(&mouse);
- initgl(windowwidth(),windowheight());
- glewInit();
+    int dx = x - cx;
+    int dy = y - cy;
 
- parseMaze(XSIZE,YSIZE, "maze1.txt");
- glutMainLoop(); 
+    // Horizontal rotation (Yaw)
+    rot_x += dx * MOUSE_SENSITIVITY;
 
- return 0;
+    // FIXED: Vertical rotation (Pitch)
+    rot_y -= dy * MOUSE_SENSITIVITY; // Subtracting ensures looking up moves camera up
+
+    // Clamp vertical look so you can't flip upside down (approx 85 degrees)
+    if (rot_y > 1.48f)  rot_y = 1.48f;
+    if (rot_y < -1.48f) rot_y = -1.48f;
+
+    glutWarpPointer(cx, cy);
 }
+
+
+int main(int argc, char** argv)
+{
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitWindowSize(windowwidth(), windowheight());
+    glutInitWindowPosition(WINDOW_STARTX, WINDOW_STARTY);
+
+    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+    int window = glutCreateWindow("openGLmaze by _Satyam_");
+
+    glutDisplayFunc(drawscene);
+    glutIdleFunc(drawscene);
+    glutReshapeFunc(resizer);
+    glutSpecialFunc(arrows);
+    glutKeyboardFunc(keypress);
+
+    // Smooth Look Setup
+    glutPassiveMotionFunc(mouse);
+    glutSetCursor(GLUT_CURSOR_NONE); // Hides Windows mouse pointer inside your application context
+
+    initgl(windowwidth(), windowheight());
+    glDisable(GL_ALPHA_TEST);
+
+    // Warp mouse once to safely start game centered
+    glutWarpPointer(windowwidth() / 2, windowheight() / 2);
+
+    parseMaze(XSIZE, YSIZE, "maze1.txt");
+    glutMainLoop();
+
+    return 0;
+}
+
