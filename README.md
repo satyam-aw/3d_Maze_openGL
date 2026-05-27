@@ -1,10 +1,23 @@
-# 3D Maze openGL for Computer Graphics CS280 S22 UCSB
-In this homework, we write an OpenGL application that lets a user navigate a maze. Our application must do three things: <br/>
-1) load the maze specification text file, parse it, and read in all the appropriate data into appropriate data structures, and <br/>
-2) pass the geometry, texture information, etc. to the hardware and use OpenGL to render it, <br/>
-3) handle the user input so they can navigate through the maze. <br/><br/>
+## 3D Maze using openGL 
+### Computer Graphics CS280 S22 UCSB
 
-In the last part of the assignment (Part 3) you will incorporate what you have learned in the first 2 parts to create your first “mini” OpenGL game. The idea is that in this homework assignment you will do everything in OpenGL, and in the next 3 assignments you will write a
-software rasterizer that will do this in software.<br/><br/>
-See complete description [here](https://drive.google.com/file/d/1UQXpE8SCL0bJqoIxq3mdPhcq5qJDQ0gV/view?usp=sharing)<br/>
-See demo video here [here](https://youtu.be/O8dUZq9Oty0)
+An immersive, first-person 3D maze exploration game built using C++, OpenGL, and FreeGLUT. Navigate through a labyrinth, keep an eye on the clock, and find your way to the exit!
+
+🕹️ Game FeaturesSmooth 3D Controls: 
+ - Modern, fluid first-person keyboard movement with responsive mouse look.
+ - Dynamic Strafe & Jump: Leap up to get a quick bird's-eye view of the maze layouts before gravity pulls you back down.
+ - On-Screen Compass: A dynamic heads-up display (HUD) needle tracking your direction in real-time.
+ - Custom Maze Generator: The environment renders dynamically by parsing layout grids straight from a plain text map file (maze1.txt).
+
+🎮 How to PlayMove / Strafe: 
+ - Use W, A, S, D (or Arrow Keys) to glide through corridors.
+ - Look Around: Move your mouse to look in any direction (Horizontal & Vertical).
+ - Jump: Press Spacebar to leap up and spy over the maze walls.
+ - Exit Game: Press Escape to close the application instantly.
+
+Download (portable version Windows x86): [link](/resources/Play_Game.zip)
+
+Gameplay Demo: [video](https://youtu.be/WjW-mPkbtok) 
+
+Course Assignment explanation: [video](https://www.youtube.com/watch?v=O8dUZq9Oty0)
+Course Assignment PDF: [link](/resources/HW1.pdf) 
