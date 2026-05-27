@@ -6,8 +6,8 @@
 
 An immersive, first-person 3D maze exploration game built using C++, OpenGL, and FreeGLUT. Navigate through a labyrinth, keep an eye on the clock, and find your way to the exit!
 
-#### 🕹️ Game FeaturesSmooth 3D Controls: 
- - Modern, fluid first-person keyboard movement with responsive mouse look.
+#### 🕹️ Game Features
+ - Smooth 3D Controls: Modern, fluid first-person keyboard movement with responsive mouse look.
  - Dynamic Strafe & Jump: Leap up to get a quick bird's-eye view of the maze layouts before gravity pulls you back down.
  - On-Screen Compass: A dynamic heads-up display (HUD) needle tracking your direction in real-time.
  - Custom Maze Generator: The environment renders dynamically by parsing layout grids straight from a plain text map file (maze1.txt).
