@@ -30,6 +30,14 @@ std::string strSec, strMn, strHour;
 // Track if keys are currently held down (Supports both lower & upper case)
 bool keys[256] = { false };
 bool specialKeys[256] = { false };
+// Jump configurations (Adjust these values to change jump feel)
+const float GRAVITY = -9.0f;       // Acceleration pulling you down
+const float JUMP_VELOCITY = 30.0f;   // Initial upward speed of the jump
+const float FLOOR_HEIGHT = -HALF_CUBE;    // Your default standing camera height
+
+// Jump state trackers
+float vertical_velocity = 0.0f;
+bool is_jumping = false;
 
 // Delta Time variables
 int oldTimeSinceStart = 0;
@@ -376,7 +384,7 @@ void move_relative(GLfloat forward_amt, GLfloat strafe_amt)
     GLfloat fx = cos(rot_x) * forward_amt;
     GLfloat fy = sin(rot_x) * forward_amt;
 
-    // CORRECTED: Strafe Right/Left vectors (A = Left, D = Right)
+    // Strafe Right/Left vectors (A = Left, D = Right)
     GLfloat sx = -sin(rot_x) * strafe_amt;
     GLfloat sy = cos(rot_x) * strafe_amt;
 
@@ -397,46 +405,51 @@ void move_relative(GLfloat forward_amt, GLfloat strafe_amt)
 
 void update_movement()
 {
-    // 1. Calculate Delta Time (seconds elapsed since last frame)
+    // Calculate Delta Time
     int timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
     float deltaTime = (timeSinceStart - oldTimeSinceStart) / 1000.0f;
     oldTimeSinceStart = timeSinceStart;
 
-    // Prevent sudden huge jumps if the window loses focus
     if (deltaTime > 0.1f) deltaTime = 0.1f;
 
-    // 2. Adjust speeds relative to the frame time
+    // Handle Jump Physics if jumping
+    if (is_jumping) {
+        // 1. Apply gravity to vertical speed over time
+        vertical_velocity += GRAVITY * deltaTime;
+
+        // 2. Move the camera height based on current vertical speed
+        camera_y += vertical_velocity * deltaTime;
+        // 3. Check if we hit or passed below the floor level
+        if (camera_y <= FLOOR_HEIGHT) {
+            camera_y = FLOOR_HEIGHT; // Snap safely to floor
+            vertical_velocity = 0.0f;
+            is_jumping = false;      // Ready to jump again
+        }
+    }
+
+    // --- Keep your existing horizontal walking / strafing code below ---
     float current_walk_speed = WALK_KEY_SENSE * 60.0f * deltaTime;
     float current_reverse_speed = WALK_KEY_REVERSE_SENSE * 60.0f * deltaTime;
     float current_turn_speed = ROTATE_KEY_SENSE * 60.0f * deltaTime;
 
-    // 3. Process movement combined smoothly every single frame
     float forward_amt = 0.0f;
     float strafe_amt = 0.0f;
 
-    // Forward / Backward
-    if (keys['w'] || keys['W'] || specialKeys[GLUT_KEY_UP])
-        forward_amt += current_walk_speed;
-    if (keys['s'] || keys['S'] || specialKeys[GLUT_KEY_DOWN])
-        forward_amt -= current_reverse_speed;
+    if (keys['w'] || keys['W'] || specialKeys[GLUT_KEY_UP])    forward_amt += current_walk_speed;
+    if (keys['s'] || keys['S'] || specialKeys[GLUT_KEY_DOWN])  forward_amt -= current_reverse_speed;
+    if (keys['a'] || keys['A'])                                strafe_amt -= current_walk_speed;
+    if (keys['d'] || keys['D'])                                strafe_amt += current_walk_speed;
 
-    // Strafe Left / Right
-    if (keys['a'] || keys['A'])
-        strafe_amt -= current_walk_speed;
-    if (keys['d'] || keys['D'])
-        strafe_amt += current_walk_speed;
-
-    // Apply movement if any keys are pressed
     if (forward_amt != 0.0f || strafe_amt != 0.0f) {
         move_relative(forward_amt, strafe_amt);
     }
 
-    // Traditional arrow key camera rotation snaps (if still desired alongside mouse)
-    if (camera_y <= 0.0f) {
+    if (camera_y <= FLOOR_HEIGHT) { // Changed from <=0.0f to match your baseline floor check
         if (specialKeys[GLUT_KEY_RIGHT]) rot_x += current_turn_speed;
         if (specialKeys[GLUT_KEY_LEFT])  rot_x -= current_turn_speed;
     }
 }
+
 
 void drawscene()
 {  
@@ -539,7 +552,14 @@ void mouse(int x, int y)
 void keypress(unsigned char key, int x, int y)
 {
     if (key == ESCAPE) exit(0);
-    keys[key] = true; // Key is being held down
+
+    // Trigger jump if Spacebar is pressed and player is currently on the ground
+    if (key == ' ' && !is_jumping) {
+        vertical_velocity = JUMP_VELOCITY;
+        is_jumping = true;
+    }
+
+    keys[key] = true;
 }
 
 void keypress_up(unsigned char key, int x, int y)
