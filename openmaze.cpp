@@ -89,11 +89,13 @@ bool collide() //Is player in a state of collision?
   if( y_at<=MAZE_EXTREME_TOP+COLLIDE_MARGIN - HALF_CUBE ||
     y_at>=MAZE_EXTREME_TOP+YSIZE*FULL_CUBE + HALF_CUBE -COLLIDE_MARGIN)
   {
+      is_jumping = false;
     youWon = true; camera_y = 0.1; CAMERA_SINK *= -1; rot_y = -M_PI_2;
     return true;
   }
  }
  else {
+     is_jumping = false;
     youWon = true; camera_y = 0.1; CAMERA_SINK *= -1; rot_y = -M_PI_2;
     return true;
  }
@@ -215,41 +217,6 @@ void update_movement()
     }
 }
 
-
-std::function<void()> draw_ortho_compass2() {
-    return []() {
-        // 5. DEFINE RADIAL ORIENTATION & SPIN
-        // Anchor position in pixels (Top Right Corner)
-        float cx = (float)windowwidth() - 140.0f;
-        float cy = (float)windowheight() - 140.0f;
-
-        // Convert rot_x radians back into degrees for OpenGL's rotation tool
-        // (We multiply by -57.2957f because OpenGL rotates counter-clockwise)
-        float rot_degrees = rot_x * 57.2957795f;
-
-        // Move drawing origin to the compass center, spin it, then draw locally
-        glTranslatef(cx, cy, 0.0f);
-        glRotatef(rot_degrees, 0.0f, 0.0f, 1.0f);
-
-        // 6. DRAW THE COMPASS OBJECT (Pointing towards standard X-Axis)
-        glBegin(GL_QUADS);
-        // Red Pointer Arrow Pointing Right (+X Direction)
-        glColor3f(1.0f, 0.2f, 0.2f); // Red
-        glVertex2f(70.0f, 0.0f);  // Tip pointing directly along X
-        glVertex2f(0.0f, 24.0f);  // Top corner
-        glVertex2f(10.0f, 0.0f);  // Inner center groove
-        glVertex2f(0.0f, -24.0f);  // Bottom corner
-
-        // Grey Base Weight Tail (Opposite Side)
-        glColor3f(0.5f, 0.5f, 0.5f); // Grey
-        glVertex2f(-10.0f, 0.0f);  // Center point
-        glVertex2f(0.0f, 24.0f);  // Top corner
-        glVertex2f(-50.0f, 0.0f);  // Tail end pointing away
-        glVertex2f(0.0f, -24.0f);  // Bottom corner
-        glEnd();
-    };
-}
-
 void drawscene()
 {  
  static bool init=0;
@@ -316,7 +283,7 @@ void drawscene()
      draw_HUD(drawText("Time Remaining: " + timeStr));
  }
  else {
-     if (camera_y > 200) resetGame();
+     if (camera_y > 100) resetGame();
      if (gameOver) {
          sky(gover_tex, sky_tex, floor_tex); //Draw sky
          draw_HUD(drawText("Time's Up!"));
@@ -361,7 +328,7 @@ void keypress(unsigned char key, int x, int y)
     if (key == ESCAPE) exit(0);
 
     // Trigger jump if Spacebar is pressed and player is currently on the ground
-    if (key == ' ' && !is_jumping) {
+    if (key == ' ' && !is_jumping && !gameOver && !youWon) {
         vertical_velocity = JUMP_VELOCITY;
         is_jumping = true;
     }

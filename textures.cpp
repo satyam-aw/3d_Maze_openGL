@@ -77,8 +77,8 @@ void sky(GLuint haze, GLuint upTop, GLuint downLo)
     glBindTexture(GL_TEXTURE_2D, downLo);
 
     // Define how many times the texture should repeat across the floor
-    float tileFactorX = 20.0f;
-    float tileFactorZ = 20.0f;
+    float tileFactorX = 60.0f;
+    float tileFactorZ = 50.0f;
 
     glBegin(GL_QUADS);
     glTexCoord2d(tileFactorX, tileFactorZ); glVertex3f(w, -HALF_CUBE - 1, -d);
