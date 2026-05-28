@@ -28,16 +28,67 @@ void wall_horizontal(GLfloat x, GLfloat y, GLfloat z, GLuint texture)
     glEnd();
 }
 
-void sky(GLuint haze)
-{ 
-     glBindTexture(GL_TEXTURE_2D, haze);
-     glBegin(GL_QUADS); 
-     glTexCoord2d(1.0, 1.0);  glVertex3f((windowwidth() / SKY_SCALE), (windowheight() / SKY_SCALE), -SKY_DISTANCE); 
-     glTexCoord2d(0.0, 1.0);  glVertex3f(-(windowwidth() / SKY_SCALE), (windowheight() / SKY_SCALE), -SKY_DISTANCE); 
-     glTexCoord2d(0.0, 0.0);  glVertex3f(-(windowwidth() / SKY_SCALE), -(windowheight() / SKY_SCALE), -SKY_DISTANCE); 
-     glTexCoord2d(1.0, 0.0);  glVertex3f((windowwidth() / SKY_SCALE), -(windowheight() / SKY_SCALE), -SKY_DISTANCE); 
-     glEnd();
+void sky(GLuint haze, GLuint upTop, GLuint downLo)
+{
+    float w = windowwidth() / SKY_SCALE;
+    float h = windowheight() / SKY_SCALE;
+    float d = SKY_DISTANCE;
+
+    glBindTexture(GL_TEXTURE_2D, haze);
+    glBegin(GL_QUADS);
+
+    // --- 1. FRONT WALL (original quad at -d) ---
+    glTexCoord2d(1.0, 1.0);  glVertex3f(w, h, -d);
+    glTexCoord2d(0.0, 1.0);  glVertex3f(-w, h, -d);
+    glTexCoord2d(0.0, 0.0);  glVertex3f(-w, -h, -d);
+    glTexCoord2d(1.0, 0.0);  glVertex3f(w, -h, -d);
+
+    // --- 2. BACK WALL (Opposite side at +d) ---
+    glTexCoord2d(1.0, 1.0);  glVertex3f(-w, h, d);
+    glTexCoord2d(0.0, 1.0);  glVertex3f(w, h, d);
+    glTexCoord2d(0.0, 0.0);  glVertex3f(w, -h, d);
+    glTexCoord2d(1.0, 0.0);  glVertex3f(-w, -h, d);
+
+    // --- 3. LEFT WALL (At -w) ---
+    glTexCoord2d(1.0, 1.0);  glVertex3f(-w, h, -d);
+    glTexCoord2d(0.0, 1.0);  glVertex3f(-w, h, d);
+    glTexCoord2d(0.0, 0.0);  glVertex3f(-w, -h, d);
+    glTexCoord2d(1.0, 0.0);  glVertex3f(-w, -h, -d);
+
+    // --- 4. RIGHT WALL (At +w) ---
+    glTexCoord2d(1.0, 1.0);  glVertex3f(w, h, d);
+    glTexCoord2d(0.0, 1.0);  glVertex3f(w, h, -d);
+    glTexCoord2d(0.0, 0.0);  glVertex3f(w, -h, -d);
+    glTexCoord2d(1.0, 0.0);  glVertex3f(w, -h, d);
+
+    glEnd();
+
+    // --- 5. UP TOP (At +h) ---
+    glBindTexture(GL_TEXTURE_2D, upTop);
+    glBegin(GL_QUADS);
+
+    glTexCoord2d(1.0, 1.0);  glVertex3f(w, h, -d);
+    glTexCoord2d(0.0, 1.0);  glVertex3f(-w, h, -d);
+    glTexCoord2d(0.0, 0.0);  glVertex3f(-w, h, d);
+    glTexCoord2d(1.0, 0.0);  glVertex3f(w, h, d);
+    glEnd();
+
+    // --- 5. Down Lo (At -HALF_CUBE) ---
+    glBindTexture(GL_TEXTURE_2D, downLo);
+
+    // Define how many times the texture should repeat across the floor
+    float tileFactorX = 20.0f;
+    float tileFactorZ = 20.0f;
+
+    glBegin(GL_QUADS);
+    glTexCoord2d(tileFactorX, tileFactorZ); glVertex3f(w, -HALF_CUBE - 1, -d);
+    glTexCoord2d(0.0, tileFactorZ); glVertex3f(-w, -HALF_CUBE - 1, -d);
+    glTexCoord2d(0.0, 0.0);         glVertex3f(-w, -HALF_CUBE - 1, d);
+    glTexCoord2d(tileFactorX, 0.0);         glVertex3f(w, -HALF_CUBE - 1, d);
+    glEnd();
+
 }
+
 
 void floor(GLuint grnd)
 {   

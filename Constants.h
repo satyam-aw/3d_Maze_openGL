@@ -52,7 +52,9 @@ extern std::vector<std::vector<int>> WALL_TEXTURES;
 extern std::vector<std::string> TEXTURE_PATHS;
 
 #define WALL_FILE "./resources/bmp/wall1.bmp"
-#define SKY_FILE "./resources/bmp/sky3.bmp"
+#define HAZE_FILE "./resources/bmp/sky3.bmp"
+#define SKY_FILE "./resources/bmp/sky2.bmp"
+#define GRASS_FILE "./resources/bmp/grass.bmp"
 #define GOVER_FILE "./resources/bmp/gover.bmp"
 #define YWON_FILE "./resources/bmp/ywon.bmp"
 #define FLOOR_FILE "./resources/bmp/floor.bmp"

@@ -22,7 +22,7 @@ std::function<void()> drawText(std::string text) {
     };
 }
 
-std::function<void()> draw_ortho_compass(int rot_x) {
+std::function<void()> draw_ortho_compass(float rot_x) {
     return [rot_x]() {
         // 5. DEFINE RADIAL ORIENTATION & SPIN
         // Anchor position in pixels (Top Right Corner)

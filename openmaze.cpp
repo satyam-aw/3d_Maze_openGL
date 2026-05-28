@@ -34,8 +34,8 @@ bool keys[256] = { false };
 bool specialKeys[256] = { false };
 
 // Jump configurations (Adjust these values to change jump feel)
-const float GRAVITY = -9.0f;       // Acceleration pulling you down
-const float JUMP_VELOCITY = 30.0f;   // Initial upward speed of the jump
+const float GRAVITY = -18.0f;       // Acceleration pulling you down
+const float JUMP_VELOCITY = 25.0f;   // Initial upward speed of the jump
 const float FLOOR_HEIGHT = -HALF_CUBE;    // Your default standing camera height
 const float MOUSE_SENSITIVITY = 0.003f; //Adjust this to your liking
 
@@ -216,25 +216,63 @@ void update_movement()
 }
 
 
+std::function<void()> draw_ortho_compass2() {
+    return []() {
+        // 5. DEFINE RADIAL ORIENTATION & SPIN
+        // Anchor position in pixels (Top Right Corner)
+        float cx = (float)windowwidth() - 140.0f;
+        float cy = (float)windowheight() - 140.0f;
+
+        // Convert rot_x radians back into degrees for OpenGL's rotation tool
+        // (We multiply by -57.2957f because OpenGL rotates counter-clockwise)
+        float rot_degrees = rot_x * 57.2957795f;
+
+        // Move drawing origin to the compass center, spin it, then draw locally
+        glTranslatef(cx, cy, 0.0f);
+        glRotatef(rot_degrees, 0.0f, 0.0f, 1.0f);
+
+        // 6. DRAW THE COMPASS OBJECT (Pointing towards standard X-Axis)
+        glBegin(GL_QUADS);
+        // Red Pointer Arrow Pointing Right (+X Direction)
+        glColor3f(1.0f, 0.2f, 0.2f); // Red
+        glVertex2f(70.0f, 0.0f);  // Tip pointing directly along X
+        glVertex2f(0.0f, 24.0f);  // Top corner
+        glVertex2f(10.0f, 0.0f);  // Inner center groove
+        glVertex2f(0.0f, -24.0f);  // Bottom corner
+
+        // Grey Base Weight Tail (Opposite Side)
+        glColor3f(0.5f, 0.5f, 0.5f); // Grey
+        glVertex2f(-10.0f, 0.0f);  // Center point
+        glVertex2f(0.0f, 24.0f);  // Top corner
+        glVertex2f(-50.0f, 0.0f);  // Tail end pointing away
+        glVertex2f(0.0f, -24.0f);  // Bottom corner
+        glEnd();
+    };
+}
+
 void drawscene()
 {  
  static bool init=0;
  static GLuint textureNums = TEXTURE_PATHS.size();
  static GLuint* walls = new GLuint[textureNums]; /*Textures for the cube*/
- static GLuint haze; /*Texture for the sky*/
- static GLuint gover; /*Texture for the sky*/
- static GLuint ywon; /*Texture for the sky*/
- static GLuint grnd; /*Texture for the sky*/
+ static GLuint haze_tex; /*Texture for the sky*/
+ static GLuint sky_tex; /*Texture for the sky*/
+ static GLuint floor_tex; /*Texture for the sky*/
+ static GLuint gover_tex; /*Texture for the sky*/
+ static GLuint ywon_tex; /*Texture for the sky*/
+ static GLuint grnd_tex; /*Texture for the sky*/
  
  if(!init)
  { 
   init=1;
   for(int i=0;i<textureNums;i++)
     walls[i] = maketex(&TEXTURE_PATHS[i][0], TEXTURE_SIZE, TEXTURE_SIZE);
-  haze=maketex(SKY_FILE,SKY_SIZE_X,SKY_SIZE_Y);
-  gover = maketex(GOVER_FILE, 800, 512);
-  ywon = maketex(YWON_FILE, 800, 512);
-  grnd=walls[textureNums-1];
+  haze_tex = maketex(HAZE_FILE, SKY_SIZE_X, SKY_SIZE_Y);
+  sky_tex = maketex(SKY_FILE, 612, 408);
+  floor_tex = maketex(GRASS_FILE, 375, 375);
+  gover_tex = maketex(GOVER_FILE, 800, 512);
+  ywon_tex = maketex(YWON_FILE, 800, 512);
+  grnd_tex=walls[textureNums-1];
   CONTROLLER_PLAY = min(windowwidth(), windowheight())/2.3f;
   x_at = X_INIT;
   y_at = Y_INIT;
@@ -266,32 +304,30 @@ void drawscene()
     }
  }, endTime);
 
+ gluLookAt(x_at,camera_y,y_at,x_at+cos(rot_x),camera_y+sin(rot_y), y_at + sin(rot_x), 0.0, 1.0, 0.0);
+
+ if (camera_y > 0.0 && !is_jumping) camera_y -= CAMERA_SINK;
+
+ print_maze(walls);// Draw the walls
+ floor(grnd_tex); //Draw floor
+ 
  if (!gameOver && !youWon) {
-     sky(haze); //Draw sky
+     sky(haze_tex, sky_tex, floor_tex);
      draw_HUD(drawText("Time Remaining: " + timeStr));
  }
  else {
-     cout << camera_y << "\n";
      if (camera_y > 200) resetGame();
-
      if (gameOver) {
-         sky(gover); //Draw sky
+         sky(gover_tex, sky_tex, floor_tex); //Draw sky
          draw_HUD(drawText("Time's Up!"));
      }
      else if (youWon) {
-         sky(ywon); //Draw sky
+         sky(ywon_tex, sky_tex, floor_tex); //Draw sky
          draw_HUD(drawText("You Won!"));
      }
-} 
-
- gluLookAt(x_at,camera_y,y_at,x_at+cos(rot_x),camera_y+sin(rot_y), y_at + sin(rot_x), 0.0, 1.0, 0.0);
-
- if (camera_y > 0.0) camera_y -= CAMERA_SINK;
-
- print_maze(walls);// Draw the walls
-
- floor(grnd); //Draw floor
+ }
  draw_HUD(draw_ortho_compass(rot_x));
+
  glutSwapBuffers();
 }
 

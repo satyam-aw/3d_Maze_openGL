@@ -8,5 +8,5 @@ void wall_horizontal(GLfloat x, GLfloat y, GLfloat z, GLuint texture = 1);
 
 // Environment and Maze rendering
 void print_maze(GLuint* walls); 
-void sky(GLuint haze);
+void sky(GLuint haze, GLuint upTop, GLuint downLo);
 void floor(GLuint grnd);
