@@ -16,6 +16,9 @@
 #include "Constants.h"
 #include "mazeParser.h"
 #include <sstream>
+#include <functional>
+#include <string>
+#include <ctime>
 
 using namespace std;
 
@@ -307,58 +310,7 @@ bool collide() //Is player in a state of collision?
  return 0;
 }
 
-
-void drawText(int x, int y, string text = "not") {
-
-    std::string str;
-    if (text == "not") {
-
-        int n = ((endTime - clock()) / 1000);
-
-        sec = n % 60;
-        mn = n / 60;
-        hour = n / 3600;
-        std::stringstream ss;
-        ss << sec;
-        strSec = ss.str();
-        ss.str(std::string());
-        ss.clear();
-        ss << mn;
-        strMn = ss.str();
-        ss.str(std::string());
-        ss.clear();
-        ss << hour;
-        strHour = ss.str();
-        str = strHour + "::" + strMn + "::" + strSec;
-        if (n < 0) {
-            gameOver = true;camera_y = 0.1;CAMERA_SINK *= -1; rot_y = rot_x = -M_PI_2;
-        }
-    }
-    else {
-        str = text;
-    }
-    int length = str.length();
-    glMatrixMode(GL_PROJECTION);
-    double* matrix = new double[16];
-    glGetDoublev(GL_PROJECTION_MATRIX, matrix);
-    glLoadIdentity();
-    glOrtho(0, 800, 0, 600, -5, 5);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glPushMatrix();
-    glLoadIdentity();
-    glRasterPos2i(x, y);
-    for (int i = 0; i < length; i++) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, (int)str[i]);
-    }
-    glPopMatrix();
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixd(matrix);
-    glMatrixMode(GL_MODELVIEW);
-}
-
-void draw_ortho_compass()
-{
+void draw_HUD(const std::function<void()>& drawUI) {
     // 1. Save all existing 3D attributes and server states
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 
@@ -379,45 +331,18 @@ void draw_ortho_compass()
     glPushMatrix(); // Save your 3D perspective setup matrix
     glLoadIdentity(); // Reset it to clean slate
 
-    // Create a pixel-for-pixel flat 2D coordinate box matching the viewport
-    gluOrtho2D(0.0, (double)windowwidth(), 0.0, (double)windowheight());
-
     // 4. SWITCH TO THE MODELVIEW MATRIX
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix(); // Save your 3D camera translation matrix
     glLoadIdentity(); // Reset it to clean slate
 
-    // 5. DEFINE RADIAL ORIENTATION & SPIN
-    // Anchor position in pixels (Top Right Corner)
-    float cx = (float)windowwidth() - 70.0f;
-    float cy = (float)windowheight() - 70.0f;
+    // Create a pixel-for-pixel flat 2D coordinate box matching the viewport
+    gluOrtho2D(0.0, (double)windowwidth(), 0.0, (double)windowheight());
 
-    // Convert rot_x radians back into degrees for OpenGL's rotation tool
-    // (We multiply by -57.2957f because OpenGL rotates counter-clockwise)
-    float rot_degrees = rot_x * 57.2957795f;
+    // 5. Draw the HUD
+    drawUI();
 
-    // Move drawing origin to the compass center, spin it, then draw locally
-    glTranslatef(cx, cy, 0.0f);
-    glRotatef(rot_degrees, 0.0f, 0.0f, 1.0f);
-
-    // 6. DRAW THE COMPASS OBJECT (Pointing towards standard X-Axis)
-    glBegin(GL_QUADS);
-    // Red Pointer Arrow Pointing Right (+X Direction)
-    glColor3f(1.0f, 0.2f, 0.2f); // Red
-    glVertex2f(35.0f, 0.0f);  // Tip pointing directly along X
-    glVertex2f(0.0f, 12.0f);  // Top corner
-    glVertex2f(5.0f, 0.0f);  // Inner center groove
-    glVertex2f(0.0f, -12.0f);  // Bottom corner
-
-    // Grey Base Weight Tail (Opposite Side)
-    glColor3f(0.5f, 0.5f, 0.5f); // Grey
-    glVertex2f(-5.0f, 0.0f);  // Center point
-    glVertex2f(0.0f, 12.0f);  // Top corner
-    glVertex2f(-25.0f, 0.0f);  // Tail end pointing away
-    glVertex2f(0.0f, -12.0f);  // Bottom corner
-    glEnd();
-
-    // 7. CLEANUP MATRIX STACKS COMPLETELY
+    // 6. CLEANUP MATRIX STACKS COMPLETELY
     // Pop the Modelview transformation modifications
     glPopMatrix();
 
@@ -430,6 +355,77 @@ void draw_ortho_compass()
 
     // Restore all pipeline properties (Lighting, textures, masks) exactly how they were
     glPopAttrib();
+}
+
+
+string timeLeft() {
+    // Calculate total seconds remaining
+    int n = (endTime - std::clock()) / CLOCKS_PER_SEC;
+
+    // Breakdown into hours, minutes, and seconds
+    hour = n / 3600;
+    mn = (n % 3600) / 60; // Fixed: Previous code did not bound minutes to 0-59
+    sec = n % 60;
+
+    // Convert directly to string and concatenate
+    strHour = std::to_string(hour);
+    strMn = std::to_string(mn);
+    strSec = std::to_string(sec);
+    if (n < 0) {
+        gameOver = true;camera_y = 0.1;CAMERA_SINK *= -1; rot_y = rot_x = -M_PI_2;
+    }
+    return strHour + "::" + strMn + "::" + strSec;
+}
+
+auto drawText(std::string text) {
+    // Capture the 'text' string by value into the lambda [text]
+    return [text]() {
+        int length = text.length();
+
+        // Assuming windowwidth() and windowheight() are globally accessible 
+        // or available in the scope where this eventually executes.
+        float x = (float)windowwidth() - 210.0f;
+        float y = (float)windowheight() - 250.0f;
+
+        glRasterPos2i(x, y);
+        for (int i = 0; i < length; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, (int)text[i]);
+        }
+    };
+}
+
+auto draw_ortho_compass() {
+    return []() {
+        // 5. DEFINE RADIAL ORIENTATION & SPIN
+        // Anchor position in pixels (Top Right Corner)
+        float cx = (float)windowwidth() - 140.0f;
+        float cy = (float)windowheight() - 140.0f;
+
+        // Convert rot_x radians back into degrees for OpenGL's rotation tool
+        // (We multiply by -57.2957f because OpenGL rotates counter-clockwise)
+        float rot_degrees = rot_x * 57.2957795f;
+
+        // Move drawing origin to the compass center, spin it, then draw locally
+        glTranslatef(cx, cy, 0.0f);
+        glRotatef(rot_degrees, 0.0f, 0.0f, 1.0f);
+
+        // 6. DRAW THE COMPASS OBJECT (Pointing towards standard X-Axis)
+        glBegin(GL_QUADS);
+        // Red Pointer Arrow Pointing Right (+X Direction)
+        glColor3f(1.0f, 0.2f, 0.2f); // Red
+        glVertex2f(70.0f, 0.0f);  // Tip pointing directly along X
+        glVertex2f(0.0f, 24.0f);  // Top corner
+        glVertex2f(10.0f, 0.0f);  // Inner center groove
+        glVertex2f(0.0f, -24.0f);  // Bottom corner
+
+        // Grey Base Weight Tail (Opposite Side)
+        glColor3f(0.5f, 0.5f, 0.5f); // Grey
+        glVertex2f(-10.0f, 0.0f);  // Center point
+        glVertex2f(0.0f, 24.0f);  // Top corner
+        glVertex2f(-50.0f, 0.0f);  // Tail end pointing away
+        glVertex2f(0.0f, -24.0f);  // Bottom corner
+        glEnd();
+    };
 }
 
 
@@ -572,8 +568,7 @@ void drawscene()
 
  if (!gameOver && !youWon) {
      sky(haze); //Draw sky
-     drawText(700 - 100, 500, "Time Remaining: ");
-     drawText(700, 500);
+     draw_HUD(drawText("Time Remaining: " + timeLeft()));
  }
  else {
      cout << camera_y << "\n";
@@ -581,11 +576,11 @@ void drawscene()
 
      if (gameOver) {
          sky(gover); //Draw sky
-         drawText(700, 500, "Time's Up!");
+         draw_HUD(drawText("Time's Up!"));
      }
      else if (youWon) {
          sky(ywon); //Draw sky
-         drawText(700, 500, "You Won!");
+         draw_HUD(drawText("You Won!"));
      }
 } 
 
@@ -596,7 +591,7 @@ void drawscene()
  print_maze(walls);// Draw the walls
 
  floor(grnd); //Draw floor
- draw_ortho_compass();
+ draw_HUD(draw_ortho_compass());
  glutSwapBuffers();
 }
 
