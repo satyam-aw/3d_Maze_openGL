@@ -24,7 +24,13 @@
     <ClCompile Include="Constants.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OpenGL_Setup.cpp">
+    <ClCompile Include="drawHUD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="helperMethods.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="textures.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

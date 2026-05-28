@@ -1,4 +1,3 @@
-// Libraries; we are using GLU, GLUT, and GLEW, along with C stdlib.
 #pragma once
 #pragma comment (lib, "glew32s.lib")
 #define _USE_MATH_DEFINES
@@ -15,6 +14,9 @@
 #include <ctime>
 #include "Constants.h"
 #include "mazeParser.h"
+#include "helperMethods.h"
+#include "drawHUD.h"
+#include "textures.h"
 #include <sstream>
 #include <functional>
 #include <string>
@@ -22,21 +24,20 @@
 
 using namespace std;
 
-//Maze compile-time parameters
-GLint XSIZE = 8;
-GLint YSIZE = 8;
-const GLint MAX_APPERROR = 64;
+
 int startTime = clock(), endTime = clock() + 185000;
 int sec, mn = 0, hour = 0;
 bool gameOver = false, youWon = false;
-std::string strSec, strMn, strHour;
+
 // Track if keys are currently held down (Supports both lower & upper case)
 bool keys[256] = { false };
 bool specialKeys[256] = { false };
+
 // Jump configurations (Adjust these values to change jump feel)
 const float GRAVITY = -9.0f;       // Acceleration pulling you down
 const float JUMP_VELOCITY = 30.0f;   // Initial upward speed of the jump
 const float FLOOR_HEIGHT = -HALF_CUBE;    // Your default standing camera height
+const float MOUSE_SENSITIVITY = 0.003f; //Adjust this to your liking
 
 // Jump state trackers
 float vertical_velocity = 0.0f;
@@ -54,25 +55,6 @@ static GLfloat rot_x = -M_PI_2;
 static GLint xin = 0, yin = 0;
 static GLfloat camera_y = START_CAMERA_Y;
 static GLfloat rot_y = -0.0f;
-
-
-// Functions
-
-GLint windowwidth()
-{
- static int ret=0;
- if(!ret)ret=glutGet(GLUT_SCREEN_WIDTH)-WINDOW_MARGIN;
- return ret;
-}
-
-GLint windowheight()
-{
- static int ret=0;
- if(!ret)ret=glutGet(GLUT_SCREEN_HEIGHT)-WINDOW_MARGIN;
- return ret;
-}
-
-vector<vector<GLint>>maze_innards;
 
 //App-level "init" function
 void initgl(GLint width, GLint height) 
@@ -93,174 +75,6 @@ void resizer(GLint width, GLint height)
  if(width!=windowwidth() || height!=windowheight()) exit(0); 
 }
 
-void app_assert_success(const char* szz)
-{
- if(GLint xerr= glGetError())
- { 
-  char szerr[MAX_APPERROR]; 
-  sprintf(szerr,"%s , %d",szz,xerr); 
-  fprintf(stderr,"%s",szerr); 
-  exit(1);
- }
-}
-
-
-//Loads a texture from a text file and returns its integer OpenGL handle
-GLuint maketex(const char* tfile,GLint xSize,GLint ySize) //returns tex. no.
-{
- GLuint rmesh;
- FILE * file;
- unsigned char * texdata = (unsigned char*) malloc( xSize * ySize * 3 ); //3 is {R,G,B}
-
- file = fopen(tfile, "rb" );
- fseek(file,BMP_HEADER_SIZE,SEEK_CUR);
- fread( texdata, xSize * ySize * 3, 1, file ); 
- fclose( file );
- glEnable( GL_TEXTURE_2D );
-
- char* colorbits = new char[ xSize * ySize * 3]; 
-
- for(GLint a=0; a<xSize * ySize * 3; ++a) colorbits[a]=0xFF; 
-
- glGenTextures(1,&rmesh);
- glBindTexture(GL_TEXTURE_2D,rmesh);
-
- glTexImage2D(GL_TEXTURE_2D,0 ,3 , xSize,
- ySize, 0 , GL_RGB, GL_UNSIGNED_BYTE, colorbits);
-
- app_assert_success("post0_image");
-
- glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
- glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
- app_assert_success("pre_getview");
-
- //Save viewport and set up new one
- GLint viewport[4]; //4 is {X,Y,Width,Height}
- glGetIntegerv(GL_VIEWPORT,(GLint*)viewport);
-
- app_assert_success("pre_view");
- glViewport(0,0,xSize,ySize);
- app_assert_success("post0_view");
-
- //Clear target and depth buffers
- glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); 
-
- glPushMatrix(); //Duplicates MODELVIEW stack top
- glLoadIdentity(); //Replace new top with {1}
-
- app_assert_success("ogl_mvx");
-
- glDrawPixels(xSize,ySize,GL_BGR, GL_UNSIGNED_BYTE,texdata);
-
- app_assert_success("pre_copytext");
- glPopMatrix();
- app_assert_success("copytext2");
- glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
- 0,0, xSize, ySize, 0);
- app_assert_success("post_copy");
- 
- //Restore viewport
- glViewport(viewport[0],viewport[1],viewport[2],viewport[3]); //{X,Y,Width,Height}
- app_assert_success("ogl_mm1");
- delete[] colorbits;
- free(texdata);
- return rmesh;
-
-}
-
-void wall_vertical(GLfloat x, GLfloat y, GLfloat z, GLuint texture = 1) //Draws a cube centered at (x,y,z)
-{
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    // left of cube
-    glBegin(GL_QUADS);
-    glTexCoord2d(1.0, 1.0);
-    glVertex3f(x - HALF_CUBE, WALL_HT / 2, z + HALF_CUBE); // Top Right Of The Quad (Left)
-    glTexCoord2d(0.0, 1.0);
-    glVertex3f(x - HALF_CUBE, WALL_HT / 2, z - HALF_CUBE); // Top Left Of The Quad (Left)
-    glTexCoord2d(0.0, 0.0);
-    glVertex3f(x - HALF_CUBE, -WALL_HT / 2, z - HALF_CUBE); // Bottom Left Of The Quad (Left)
-    glTexCoord2d(1.0, 0.0);
-    glVertex3f(x - HALF_CUBE, -WALL_HT / 2, z + HALF_CUBE); // Bottom Right Of The Quad (Left)
-    glEnd();
-}
-
-void wall_horizontal(GLfloat x, GLfloat y, GLfloat z, GLuint texture = 1) //Draws a cube centered at (x,y,z)
-{
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    // Back
-    glBegin(GL_QUADS);
-    glTexCoord2d(1.0,1.0); 
-    glVertex3f(x + HALF_CUBE, WALL_HT / 2,z-HALF_CUBE); // Top Right Of The Quad (Back)
-    glTexCoord2d(0.0,1.0); 
-    glVertex3f(x - HALF_CUBE, WALL_HT / 2,z-HALF_CUBE); // Top Left Of The Quad (Back)
-    glTexCoord2d(0.0,0.0); 
-    glVertex3f(x - HALF_CUBE,-WALL_HT/2,z-HALF_CUBE); // Bottom Left Of The Quad (Back)
-    glTexCoord2d(1.0,0.0); 
-    glVertex3f(x + HALF_CUBE,-WALL_HT / 2,z-HALF_CUBE); // Bottom Right Of The Quad (Back)
-    glEnd();
-}
-
-void sky(GLuint haze)
-{ 
-    //Modelled after cube front
-     glBindTexture(GL_TEXTURE_2D,haze);
-     glBegin(GL_QUADS); 
-     glTexCoord2d(1.0,1.0);
-     glVertex3f( (windowwidth()/SKY_SCALE), (windowheight()/SKY_SCALE),-SKY_DISTANCE); 
-     glTexCoord2d(0.0,1.0);
-     glVertex3f( -(windowwidth()/SKY_SCALE), (windowheight()/SKY_SCALE),-SKY_DISTANCE); 
-     glTexCoord2d(0.0,0.0);
-     glVertex3f( -(windowwidth()/SKY_SCALE), -(windowheight()/SKY_SCALE),-SKY_DISTANCE); 
-     glTexCoord2d(1.0,0.0);
-     glVertex3f( (windowwidth()/SKY_SCALE), -(windowheight()/SKY_SCALE),-SKY_DISTANCE); 
-     glEnd();
-}
-
-void floor(GLuint grnd)
-{   
-    //Modelled after cube front
-    glBindTexture(GL_TEXTURE_2D, grnd);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    
-    glBegin(GL_QUADS);
-    glTexCoord2d(10.0, 10.0);
-    glVertex3f(MAZE_EXTREME_LEFT+ XSIZE*FULL_CUBE, -HALF_CUBE, MAZE_EXTREME_TOP);
-    glTexCoord2d(0.0, 10.0);
-    glVertex3f(MAZE_EXTREME_LEFT, -HALF_CUBE, MAZE_EXTREME_TOP);
-    glTexCoord2d(0.0, 0.0);
-    glVertex3f(MAZE_EXTREME_LEFT, -HALF_CUBE, MAZE_EXTREME_TOP + YSIZE * FULL_CUBE);
-    glTexCoord2d(10.0, 0.0);
-    glVertex3f(MAZE_EXTREME_LEFT + XSIZE * FULL_CUBE, -HALF_CUBE, MAZE_EXTREME_TOP + YSIZE * FULL_CUBE);
-    glEnd();
-}
-
-
-void print_maze(GLuint *walls) //Renders the necessary OpenGL cubes
-{
- int x,y; 
-
- for(y=0; y<YSIZE*2 ; ++y ) //Maze proper
- {
-  for(x=0; x<XSIZE ; ++x )
-  {
-      if (y % 2 == 0 && WALL_TEXTURES[y][x]) {
-          wall_horizontal(LEFTMOST_CUBE_CENTER + ((GLfloat)x * FULL_CUBE),
-              0.0,
-              MAZE_EXTREME_TOP + HALF_CUBE + ((GLfloat)(y / 2) * FULL_CUBE), walls[WALL_TEXTURES[y][x] - 1]);
-      }
-
-      else if (y % 2 == 1 && WALL_TEXTURES[y][x]) {
-          wall_vertical(LEFTMOST_CUBE_CENTER + ((GLfloat)x * FULL_CUBE),
-              0.0,
-              MAZE_EXTREME_TOP + HALF_CUBE + ((GLfloat)(y / 2) * FULL_CUBE), walls[WALL_TEXTURES[y][x] - 1]);
-      }
-  }
- }
-}
 
 bool collide() //Is player in a state of collision?
 {
@@ -310,125 +124,6 @@ bool collide() //Is player in a state of collision?
  return 0;
 }
 
-void draw_HUD(const std::function<void()>& drawUI) {
-    // 1. Save all existing 3D attributes and server states
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-
-    // 2. Disable EVERYTHING that could interfere with flat colors
-    glDisable(GL_LIGHTING);
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glDisable(GL_CULL_FACE);
-
-    // Turn off vertex arrays in case your maze rendering engine leaves them active
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    // 3. SWITCH TO THE PROJECTION MATRIX (Crucial step)
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix(); // Save your 3D perspective setup matrix
-    glLoadIdentity(); // Reset it to clean slate
-
-    // 4. SWITCH TO THE MODELVIEW MATRIX
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix(); // Save your 3D camera translation matrix
-    glLoadIdentity(); // Reset it to clean slate
-
-    // Create a pixel-for-pixel flat 2D coordinate box matching the viewport
-    gluOrtho2D(0.0, (double)windowwidth(), 0.0, (double)windowheight());
-
-    // 5. Draw the HUD
-    drawUI();
-
-    // 6. CLEANUP MATRIX STACKS COMPLETELY
-    // Pop the Modelview transformation modifications
-    glPopMatrix();
-
-    // Switch back to Projection and pop it back to your original 3D perspective
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-
-    // Reset the matrix focus context mode back to normal operations
-    glMatrixMode(GL_MODELVIEW);
-
-    // Restore all pipeline properties (Lighting, textures, masks) exactly how they were
-    glPopAttrib();
-}
-
-
-string timeLeft() {
-    // Calculate total seconds remaining
-    int n = (endTime - std::clock()) / CLOCKS_PER_SEC;
-
-    // Breakdown into hours, minutes, and seconds
-    hour = n / 3600;
-    mn = (n % 3600) / 60; // Fixed: Previous code did not bound minutes to 0-59
-    sec = n % 60;
-
-    // Convert directly to string and concatenate
-    strHour = std::to_string(hour);
-    strMn = std::to_string(mn);
-    strSec = std::to_string(sec);
-    if (n < 0) {
-        gameOver = true;camera_y = 0.1;CAMERA_SINK *= -1; rot_y = rot_x = -M_PI_2;
-    }
-    return strHour + "::" + strMn + "::" + strSec;
-}
-
-auto drawText(std::string text) {
-    // Capture the 'text' string by value into the lambda [text]
-    return [text]() {
-        int length = text.length();
-
-        // Assuming windowwidth() and windowheight() are globally accessible 
-        // or available in the scope where this eventually executes.
-        float x = (float)windowwidth() - 210.0f;
-        float y = (float)windowheight() - 250.0f;
-
-        glRasterPos2i(x, y);
-        for (int i = 0; i < length; i++) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, (int)text[i]);
-        }
-    };
-}
-
-auto draw_ortho_compass() {
-    return []() {
-        // 5. DEFINE RADIAL ORIENTATION & SPIN
-        // Anchor position in pixels (Top Right Corner)
-        float cx = (float)windowwidth() - 140.0f;
-        float cy = (float)windowheight() - 140.0f;
-
-        // Convert rot_x radians back into degrees for OpenGL's rotation tool
-        // (We multiply by -57.2957f because OpenGL rotates counter-clockwise)
-        float rot_degrees = rot_x * 57.2957795f;
-
-        // Move drawing origin to the compass center, spin it, then draw locally
-        glTranslatef(cx, cy, 0.0f);
-        glRotatef(rot_degrees, 0.0f, 0.0f, 1.0f);
-
-        // 6. DRAW THE COMPASS OBJECT (Pointing towards standard X-Axis)
-        glBegin(GL_QUADS);
-        // Red Pointer Arrow Pointing Right (+X Direction)
-        glColor3f(1.0f, 0.2f, 0.2f); // Red
-        glVertex2f(70.0f, 0.0f);  // Tip pointing directly along X
-        glVertex2f(0.0f, 24.0f);  // Top corner
-        glVertex2f(10.0f, 0.0f);  // Inner center groove
-        glVertex2f(0.0f, -24.0f);  // Bottom corner
-
-        // Grey Base Weight Tail (Opposite Side)
-        glColor3f(0.5f, 0.5f, 0.5f); // Grey
-        glVertex2f(-10.0f, 0.0f);  // Center point
-        glVertex2f(0.0f, 24.0f);  // Top corner
-        glVertex2f(-50.0f, 0.0f);  // Tail end pointing away
-        glVertex2f(0.0f, -24.0f);  // Bottom corner
-        glEnd();
-    };
-}
-
-
 void resetGame() {
     x_at = X_INIT;
     y_at = Y_INIT;
@@ -444,8 +139,6 @@ void resetGame() {
     rot_y = -M_PI_2;
 }
 
-// Define a mouse sensitivity variable (Adjust this to your liking)
-const float MOUSE_SENSITIVITY = 0.003f;
 
 void move_relative(GLfloat forward_amt, GLfloat strafe_amt)
 {
@@ -566,9 +259,16 @@ void drawscene()
  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
+ string timeStr = timeLeft([](int s, int m, int h, int n) {
+        sec=s; mn=m; hour=h;
+        if (n < 0) {
+        gameOver = true;camera_y = 0.1;CAMERA_SINK *= -1; rot_y = rot_x = -M_PI_2;
+    }
+ }, endTime);
+
  if (!gameOver && !youWon) {
      sky(haze); //Draw sky
-     draw_HUD(drawText("Time Remaining: " + timeLeft()));
+     draw_HUD(drawText("Time Remaining: " + timeStr));
  }
  else {
      cout << camera_y << "\n";
@@ -591,7 +291,7 @@ void drawscene()
  print_maze(walls);// Draw the walls
 
  floor(grnd); //Draw floor
- draw_HUD(draw_ortho_compass());
+ draw_HUD(draw_ortho_compass(rot_x));
  glutSwapBuffers();
 }
 

@@ -141,8 +141,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Constants.cpp" />
+    <ClCompile Include="drawHUD.cpp" />
+    <ClCompile Include="helperMethods.cpp" />
     <ClCompile Include="mazeParser.cpp" />
     <ClCompile Include="openmaze.cpp" />
+    <ClCompile Include="textures.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Constants.h" />

@@ -32,8 +32,12 @@ extern GLfloat WALK_MOUSE_REVERSE_SENSE = 0.00008f; //Slower when backpedaling
 extern GLfloat WALK_KEY_REVERSE_SENSE = 0.5f;
 extern GLfloat BOUNCEBACK = 5.0f; //1.0f means none (just reverse collision)
 extern GLfloat SKY_SCALE = 6.0f;
+
+//Maze compile-time parameters
 extern GLfloat X_INIT = LEFTMOST_CUBE_CENTER + (8 / 2) * FULL_CUBE;
 extern GLfloat Y_INIT = MAZE_EXTREME_TOP + (8 / 2) * FULL_CUBE + HALF_CUBE;
+extern GLint XSIZE = 8;
+extern GLint YSIZE = 8;
 
 extern std::vector<std::vector<int>> WALL_TEXTURES = {};
 extern std::vector<std::string> TEXTURE_PATHS = {};

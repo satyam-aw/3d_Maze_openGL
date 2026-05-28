@@ -41,8 +41,12 @@ extern GLfloat WALK_MOUSE_REVERSE_SENSE; //Slower when backpedaling
 extern GLfloat WALK_KEY_REVERSE_SENSE;
 extern GLfloat BOUNCEBACK; //1.0f means none (just reverse collision)
 extern GLfloat SKY_SCALE;
+
+//Maze compile-time parameters
 extern GLfloat X_INIT;
 extern GLfloat Y_INIT;
+extern GLint XSIZE;
+extern GLint YSIZE;
 
 extern std::vector<std::vector<int>> WALL_TEXTURES;
 extern std::vector<std::string> TEXTURE_PATHS;
