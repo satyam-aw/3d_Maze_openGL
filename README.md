@@ -31,7 +31,7 @@ An immersive, first-person 3D maze exploration game built using C++, OpenGL, and
 
 #### 📥 Important Links
 
-* **Download (Portable Windows x86):** [Play_Game.zip](/resources/Play_Game.zip) _(launch using Play_Game.bat)_
+* **Download (Portable Windows x86):** [Play_Game.zip](https://github.com/satyam-aw/3d_Maze_openGL/raw/refs/heads/main/resources/Play_Game.zip) _(launch using Play_Game.bat)_
 * **Level 2 Gameplay Playthrough:** [Watch Video](https://www.youtube.com/watch?v=9cJ7eTtbbqo)
 * **Course Assignment Explanation:** [Watch Video](https://www.youtube.com/watch?v=O8dUZq9Oty0)
 * **Course Assignment PDF:** [View HW1.pdf](/resources/HW1.pdf)
