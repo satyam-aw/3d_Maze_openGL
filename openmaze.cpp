@@ -1,11 +1,14 @@
 #pragma once
 #pragma comment (lib, "glew32s.lib")
+#pragma comment(lib, "winmm.lib") 
 #define _USE_MATH_DEFINES
 #define _CRT_SECURE_NO_WARNINGS
+
 
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <windows.h> //Seems necessary for GLUT
+#include <mmsystem.h>
 #include <GL/glu.h> 
 #include <GL/glut.h>
 #include <GL\freeglut.h>
@@ -34,14 +37,16 @@ bool keys[256] = { false };
 bool specialKeys[256] = { false };
 
 // Jump configurations (Adjust these values to change jump feel)
-const float GRAVITY = -18.0f;       // Acceleration pulling you down
+const float GRAVITY = -28.0f;       // Acceleration pulling you down
 const float JUMP_VELOCITY = 25.0f;   // Initial upward speed of the jump
 const float FLOOR_HEIGHT = -HALF_CUBE;    // Your default standing camera height
-const float MOUSE_SENSITIVITY = 0.003f; //Adjust this to your liking
+const float MOUSE_SENSITIVITY = 0.001f; //Adjust this to your liking
 
 // Jump state trackers
 float vertical_velocity = 0.0f;
 bool is_jumping = false;
+
+bool victorySoundPlayed = false;
 
 // Delta Time variables
 int oldTimeSinceStart = 0;
@@ -51,10 +56,10 @@ int oldTimeSinceStart = 0;
 //  alternative to giving them file-level scope.
 static GLfloat x_at = START_X_AT;
 static GLfloat y_at = START_Y_AT;
-static GLfloat rot_x = -M_PI_2;
+static GLfloat rot_x = M_PI_2;
 static GLint xin = 0, yin = 0;
 static GLfloat camera_y = START_CAMERA_Y;
-static GLfloat rot_y = -0.0f;
+static GLfloat rot_y = -M_PI_2;
 
 //App-level "init" function
 void initgl(GLint width, GLint height) 
@@ -90,13 +95,13 @@ bool collide() //Is player in a state of collision?
     y_at>=MAZE_EXTREME_TOP+YSIZE*FULL_CUBE + HALF_CUBE -COLLIDE_MARGIN)
   {
       is_jumping = false;
-    youWon = true; camera_y = 0.1; CAMERA_SINK *= -1; rot_y = -M_PI_2;
+    youWon = true; camera_y = 0.1; CAMERA_SINK *= -2; rot_y = -M_PI_2;
     return true;
   }
  }
  else {
      is_jumping = false;
-    youWon = true; camera_y = 0.1; CAMERA_SINK *= -1; rot_y = -M_PI_2;
+    youWon = true; camera_y = 0.1; CAMERA_SINK *= -2; rot_y = -M_PI_2;
     return true;
  }
 
@@ -134,11 +139,14 @@ void resetGame() {
     startTime = clock(), endTime = clock() + 185000;
     sec, mn = 0, hour = 0;
        
-    rot_x = -M_PI_2;
+    rot_x = M_PI_2;
     xin = 0, yin = 0;
     camera_y = START_CAMERA_Y;
-    CAMERA_SINK *= -1;
+    CAMERA_SINK *= -0.5;
     rot_y = -M_PI_2;
+    victorySoundPlayed = false;
+    
+    PlaySound(TEXT("resources/wav/background_music.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
 }
 
 
@@ -267,7 +275,7 @@ void drawscene()
  string timeStr = timeLeft([](int s, int m, int h, int n) {
         sec=s; mn=m; hour=h;
         if (n < 0) {
-        gameOver = true;camera_y = 0.1;CAMERA_SINK *= -1; rot_y = rot_x = -M_PI_2;
+        gameOver = true;camera_y = 0.1;CAMERA_SINK *= -2; rot_y = rot_x = -M_PI_2;
     }
  }, endTime);
 
@@ -283,7 +291,7 @@ void drawscene()
      draw_HUD(drawText("Time Remaining: " + timeStr));
  }
  else {
-     if (camera_y > 100) resetGame();
+     if (camera_y > 150) resetGame();
      if (gameOver) {
          sky(gover_tex, sky_tex, floor_tex); //Draw sky
          draw_HUD(drawText("Time's Up!"));
@@ -291,6 +299,15 @@ void drawscene()
      else if (youWon) {
          sky(ywon_tex, sky_tex, floor_tex); //Draw sky
          draw_HUD(drawText("You Won!"));
+
+         // --- TRIGGER VICTORY AUDIO HERE ---
+         if (!victorySoundPlayed) {
+             // SND_ASYNC plays it smoothly in the background
+             // We omit SND_LOOP so it plays exactly once
+             PlaySound(TEXT("resources/wav/victory_music.wav"), NULL, SND_FILENAME | SND_ASYNC);
+
+             victorySoundPlayed = true; // Lock it so it doesn't loop aggressively
+         }
      }
  }
  draw_HUD(draw_ortho_compass(rot_x));
@@ -385,6 +402,14 @@ int main(int argc, char** argv)
     glutWarpPointer(windowwidth() / 2, windowheight() / 2);
 
     parseMaze(XSIZE, YSIZE, "maze1.txt");
+
+
+    // --- START BACKGROUND MUSIC HERE ---
+    // SND_ASYNC = plays on background thread so game doesn't freeze
+    // SND_LOOP  = loops the track indefinitely
+    // SND_FILENAME = tells it to look for an external file path string
+    PlaySound(TEXT("resources/wav/background_music.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
+
     glutMainLoop();
 
     return 0;
