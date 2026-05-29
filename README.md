@@ -1,7 +1,17 @@
 ## 3D Maze using openGL 
 ##### _Computer Graphics CS280 S22 UCSB_
 
-[![Level 2 Gameplay Playthrough](/resources/3.webp)](https://youtu.be/WjW-mPkbtok)
+
+<p align="center">
+  <a href="https://youtu.be/9cJ7eTtbbqo">
+    <img src="resources/3.webp" width="70%" alt="Level 2 Gameplay Playthrough">
+  </a>
+</p>
+<p align="center">
+  <em>Figure 1: Real-time first-person navigation inside the maze environment, highlighting the fluid mouse look, 3D world geometry, and automated status HUD tracking. (<a href="https://youtu.be/9cJ7eTtbbqo">Watch Full Video Playthrough</a>)</em>
+</p>
+
+
 
 
 An immersive, first-person 3D maze exploration game built using C++, OpenGL, and FreeGLUT. Navigate through a labyrinth, keep an eye on the clock, and find your way to the exit!
@@ -22,6 +32,6 @@ An immersive, first-person 3D maze exploration game built using C++, OpenGL, and
 #### 📥 Important Links
 
 * **Download (Portable Windows x86):** [Play_Game.zip](/resources/Play_Game.zip) _(launch using Play_Game.bat)_
-* **Level 2 Gameplay Playthrough:** [Watch Video](https://youtu.be/WjW-mPkbtok)
+* **Level 2 Gameplay Playthrough:** [Watch Video](https://www.youtube.com/watch?v=9cJ7eTtbbqo)
 * **Course Assignment Explanation:** [Watch Video](https://www.youtube.com/watch?v=O8dUZq9Oty0)
 * **Course Assignment PDF:** [View HW1.pdf](/resources/HW1.pdf)
